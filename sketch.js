@@ -6,6 +6,7 @@ const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
 // Game
+let paused;
 let passed;
 let collided;
 let score;
@@ -44,6 +45,7 @@ function setup() {
     new Canvas(WIDTH, HEIGHT);
 
     // Game
+	paused = false;
     passed = false;
     collided = false;
     score = 0;
@@ -101,31 +103,42 @@ function setup() {
 
 }
 
-function collide(player, fork) {
-	console.log('hit');
-}
-
 function draw() {
 
     background(32);
 
     // Game
     update_score();
+	input();
 
     // Player
-    fall();
-    if (kb.presses('space') || mouse.presses()) {jump()}
+    if (world.timeScale != 0) {fall()}
 
     // Forks
     for (let i = 1; i < forks.length; i += 2){
 
-        let fork1 = forks[i - 1]
-        let fork2 = forks[i]
+        let fork1 = forks[i - 1];
+        let fork2 = forks[i];
 
         if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {position_forks(WIDTH - fork_width / 2, fork1, fork2)}
         
     }
 
+}
+
+function input() {
+
+	if (kb.presses('space')) {
+
+		if (!paused) {world.timeScale = 0; paused = true}
+		else if (paused) {world.timeScale = 1; paused = false}
+
+	}
+	if (mouse.presses()) {jump()}
+}
+
+function collide(player, fork) {
+	console.log('hit');
 }
 
 function update_score() {
@@ -160,18 +173,16 @@ function add_forks(x, img) {
     let fork1 = new forks.Sprite(0, 0);
     fork1.img = img;
     fork1.scale = fork_scale;
-    fork1.collider = 'none';
-    fork1.addCollider(0, 0, 48 * fork_scale, 351 * fork_scale)
-    fork1.collider = 'k'
+    fork1.addCollider(0, 0, 48 * fork_scale, 351 * fork_scale);
+	fork1.collider = 'k';
     fork1.passed = false;
     fork1.orientation = 'up';
 
     let fork2 = new forks.Sprite(0, 0);
     fork2.img = img;
     fork2.scale = fork_scale;
-    fork2.collider = 'none';
-    fork2.addCollider(0, 0, 48 * fork_scale, 351 * fork_scale)
-    fork2.collider = 'k'
+    fork2.addCollider(0, 0, 48 * fork_scale, 351 * fork_scale);
+	fork2.collider = 'k';
     fork2.rotation = 180
     fork2.passed = false
     fork2.orientation = 'down'
