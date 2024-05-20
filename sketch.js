@@ -22,8 +22,6 @@ let player_jump_boost;
 
 // Forks
 let forks;
-let fork_align_turn;
-let fork_round;
 let fork_scale_x;
 let fork_scale_y;
 let fork_img;
@@ -34,6 +32,8 @@ let fork_offset_y;
 let fork_offset_y_bounds;
 let fork_gap;
 let fork_speed;
+
+let fork_hitboxes;
 
 function preload() {
     
@@ -65,48 +65,48 @@ function setup() {
     player.scale = 0.3;
 
     // Forks
-	fork_round = 0;
-	fork_align_turn = 'up';
     fork_count = 4;
     fork_speed = 5;
     fork_gap = 400;
-    fork_scale_y = 2;
-	fork_scale_x = 2.5;
+    fork_scale = 2;
     fork_height = 351 * fork_scale_y;
-    fork_width = 188 * fork_scale_x;
+    fork_width = 69 * fork_scale_x;
     fork_offset_y_bounds = [400, 600];
     
     forks = new Group();
     
     forks.vel.x = -fork_speed;
     forks.collider = 'k';
+
+    fork_hitboxes = new Group();
+    fork_hitboxes.collider = 'k';
+    fork_hitboxes.w = fork_width;
+    fork_hitboxes.h = fork_height;
+    fork_hitboxes.shapeColor.setAlpha(256)
     
     for (let i = 0; i < fork_count; i++) {
 
 		add_forks(
 			x = WIDTH + (WIDTH / fork_count) * i + fork_width / 2,
-			id = i,
 			img = fork_img
 		)
+        fork_hitboxes.add(new Sprite())
 	
-	}
-
-    // Text
-    score_txt = new Sprite(100, 50, 160, 60);
-    score_txt.text = 'Score';
-    score_txt.textSize = 50;
-    score_txt.textColor = color('#ffffff');
-    score_txt.collider = 's';
-    score_txt.color = color('#080808');
-    score_txt.stroke = color('#080808');
+    }
     
-    score_count_txt = new Sprite(100, 100, 160, 60);
+    // Text
+    text = new Group();
+    text.textSize = 50;
+    text.textColor = color('#ffffff');
+    text.collider = 's';
+    text.color = color('#080808');
+    text.stroke = color('#080808');
+    
+    score_txt = new text.Sprite(100, 50, 160, 60);
+    score_text.text = 'Score';
+    
+    score_count_txt = new text.Sprite(100, 100, 160, 60);
     score_count_txt.text = score;
-    score_count_txt.textSize = 50;
-    score_count_txt.collider = 's';
-    score_count_txt.color = color('#080808');
-    score_count_txt.stroke = color('#080808');
-    score_count_txt.textColor = color('#ffffff');
 
 }
 
@@ -129,13 +129,15 @@ function draw() {
 
         if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {
 
-			if (fork1.id == 0 || fork2.id == 0) {fork_round++}
 			position_forks(WIDTH - fork_width / 2, fork1.id, fork1, fork2)
 
 		}
         
     }
-
+    // Fork Hitboxes
+    for (let i = 0; i < forks.length; i++) {
+        fork_hitboxes[i].moveTowards(forks[i], 1)
+    }
 }
 
 function input() {
@@ -176,85 +178,37 @@ function fall() {
 }
 
 // FORKS
-function add_forks(x, id, img) {
+function add_forks(x, img) {
 
     let fork1 = new forks.Sprite(0, 0);
     fork1.img = img;
-    fork1.scale.y = fork_scale_y;
-	fork1.scale.x = fork_scale_x;
+    fork1.scale = fork_scale;
 	fork1.collider = 'k';
     fork1.passed = false;
-	fork1.id = id;
-	fork1.p_id = id;
     fork1.orientation = 'up';
 
     let fork2 = new forks.Sprite(0, 0);
     fork2.img = img;
-    fork2.scale.y = fork_scale_y;
-	fork2.scale.x = fork_scale_x;
+    fork2.scale = fork_scale;
 	fork2.collider = 'k';
     fork2.rotation = 180
     fork2.passed = false
-	fork2.id = id;
-	fork2.p_id = id + 1;
     fork2.orientation = 'down'
 
-    position_forks(x, id, fork1, fork2)
+    position_forks(x, fork1, fork2)
     
 }
 
-function position_forks(x, id, fork1, fork2) {
+function position_forks(x, fork1, fork2) {
 
-	console.log(id, fork_round, (id == 0 && fork_round == 0), fork_align_turn)
-
-	if (id == 0 && fork_round == 0) {
-
-		fork_offset_y = random(fork_offset_y_bounds[0], fork_offset_y_bounds[1]);
+    fork_offset_y = random(fork_offset_y_bounds[0], fork_offset_y_bounds[1]);
 		
-		fork1.x = x;
-		fork1.y = fork_offset_y + fork_height / 2 + fork_gap / 2;
-		fork1.passed = false;
+	fork1.x = x;
+    fork1.y = fork_offset_y + fork_height / 2 + fork_gap / 2;
+	fork1.passed = false;
 
-		fork2.x = x;
-		fork2.y = fork_offset_y - fork_height / 2 - fork_gap / 2;
-		fork2.passed = false;
-
-		fork_align_turn = 'down';
-
-	}
-	else {
-
-		fork_offset_y = random(fork_offset_y_bounds[0], fork_offset_y_bounds[1]);
-
-		if (fork_align_turn == 'up') {
-
-			console.log(fork1.p_id, fork2.p_id)
-
-			fork1.x = x; 
-			fork1.y = forks[fork1.p_id + (forks.length - 2) % forks.length].y;
-			fork1.passed = false;
-
-			fork2.x = x;
-			fork2.y = fork_offset_y - fork_height / 2 - fork_gap / 2;
-			fork2.passed = false;
-
-			fork_align_turn = 'down';
-
-		}
-		else if (fork_align_turn == 'down') {
-
-			fork1.x = x;
-			fork1.y = fork_offset_y + fork_height / 2 + fork_gap / 2;
-			fork1.passed = false;
-
-			fork2.x = x;
-			fork2.y = forks[fork2.p_id + (forks.length - 2) % forks.length].y;
-			fork2.passed = false;
-
-			fork_align_turn = 'up';
-
-		}
-
-	}
+	fork2.x = x;
+    fork2.y = fork_offset_y - fork_height / 2 - fork_gap / 2;
+	fork2.passed = false;
     
 }
