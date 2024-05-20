@@ -5,25 +5,34 @@ const HEIGHT = 1080;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
+const BG_COLOUR = '#101010'
+
 // Game
 let paused;
+let ended;
 let passed;
 let collided;
 let score;
 
 // Text
 let score_txt;
+let score_count_txt;
+let game_over_txt;
+let press_mouse_txt;
+let clicked;
 
 // Player
 let player;
 let player_img;
 let player_grav;
 let player_jump_boost;
+let player_scale;
+let player_width;
+let player_height;
 
 // Forks
 let forks;
-let fork_scale_x;
-let fork_scale_y;
+let fork_scale;
 let fork_img;
 let fork_height;
 let fork_width;
@@ -48,7 +57,8 @@ function setup() {
     new Canvas(WIDTH, HEIGHT);
 
     // Game
-	paused = false;
+	paused = true;
+	ended = false;
     passed = false;
     collided = false;
     score = 0;
@@ -56,46 +66,61 @@ function setup() {
     // Player
     player_grav = 0.75;
     player_jump_boost = 12.5;
+	player_scale = 0.3;
+	player_width = 444 * player_scale;
+	player_height = 280 * player_scale;
     
     player = new Sprite(500, CENTER_Y);
     
     player.img = player_img;
-    player.collider = 'k';
+    player.collider = 'none';
+	player.addCollider(0, 0, 444, 280)
+	player.collider = 'd';
     player.layer = 1;
-    player.scale = 0.3;
+    player.scale = player_scale;
+	player.debug = true;
 
     // Forks
     fork_count = 4;
     fork_speed = 5;
-    fork_gap = 400;
+    fork_gap = 600;
     fork_scale = 2;
-    fork_height = 351 * fork_scale_y;
-    fork_width = 69 * fork_scale_x;
+    fork_height = 351 * fork_scale;
+    fork_width = 69 * fork_scale;
     fork_offset_y_bounds = [400, 600];
     
     forks = new Group();
     
     forks.vel.x = -fork_speed;
     forks.collider = 'k';
+	forks.layer = 0;
 
-    fork_hitboxes = new Group();
-    fork_hitboxes.collider = 'k';
-    fork_hitboxes.w = fork_width;
-    fork_hitboxes.h = fork_height;
-    fork_hitboxes.shapeColor.setAlpha(256)
-    
-    for (let i = 0; i < fork_count; i++) {
+	for (let i = 0; i < fork_count; i++) {
 
 		add_forks(
 			x = WIDTH + (WIDTH / fork_count) * i + fork_width / 2,
 			img = fork_img
 		)
-        fork_hitboxes.add(new Sprite())
 	
     }
-    
+
+    fork_hitboxes = new Group();
+	fork_hitboxes.layer = 1;
+	fork_hitboxes.color = color(BG_COLOUR)
+    fork_hitboxes.collider = 'k';
+	fork_hitboxes.debug = true;
+
+	for (let i = 0; i < forks.length; i++) {
+
+		let hitbox = new fork_hitboxes.Sprite(0, 0, fork_width, fork_height);
+		hitbox.color = fork_hitboxes.color;
+		hitbox.collider = 'k';
+
+    }
+
     // Text
     text = new Group();
+
     text.textSize = 50;
     text.textColor = color('#ffffff');
     text.collider = 's';
@@ -103,52 +128,86 @@ function setup() {
     text.stroke = color('#080808');
     
     score_txt = new text.Sprite(100, 50, 160, 60);
-    score_text.text = 'Score';
+    score_txt.text = 'Score';
     
     score_count_txt = new text.Sprite(100, 100, 160, 60);
     score_count_txt.text = score;
+
+	press_mouse_txt = new text.Sprite(WIDTH / 2, HEIGHT / 2, 400, 100);
+	press_mouse_txt.text = 'Click to begin';
+	clicked = false;
 
 }
 
 function draw() {
 
-    background(32);
+    background(color(BG_COLOUR));
 
     // Game
     update_score();
 	input();
+	if (paused) {world.timeScale = 0}
+	if (!paused) {world.timeScale = 1}
 
     // Player
-    if (world.timeScale != 0) {fall()}
+    if (!paused && !ended) {fall()}
 
     // Forks
-    for (let i = 1; i < forks.length; i += 2){
+    for (let i = 1; i < forks.length; i += 2) {
 
         let fork1 = forks[i - 1];
         let fork2 = forks[i];
 
-        if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {
-
-			position_forks(WIDTH - fork_width / 2, fork1.id, fork1, fork2)
-
-		}
+        if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {position_forks(WIDTH - fork_width / 2, fork1, fork2)}
         
     }
     // Fork Hitboxes
     for (let i = 0; i < forks.length; i++) {
-        fork_hitboxes[i].moveTowards(forks[i], 1)
+
+		let hitbox = fork_hitboxes[i];
+        hitbox.x = forks[i].x;
+		hitbox.y = forks[i].y;
+
     }
 }
 
 function input() {
 
-	if (kb.presses('space')) {
+	if (!ended) {
 
-		if (!paused) {world.timeScale = 0; paused = true}
-		else if (paused) {world.timeScale = 1; paused = false}
+		// Keypresses
+		if (kb.presses('space')) {
+
+			if (!paused) {paused = true}
+			else if (paused) {paused = false}
+
+		}
+
+		if (mouse.pressed()) {
+
+			if (!clicked) {
+
+				jump(); 
+				clicked = true; 
+				paused = false;
+				press_mouse_txt.remove();
+
+			}
+			else {jump()}
+
+		}
+
+		// Collisions
+		if (player.collided(fork_hitboxes)) {game_over()}
+		check_out_of_bounds();
 
 	}
-	if (mouse.presses()) {jump()}
+	if (ended) {
+
+		if (kb.presses('space')) {reset()}
+
+	}
+
 }
 
 function update_score() {
@@ -168,6 +227,41 @@ function update_score() {
     
 }
 
+function game_over() {
+
+	game_over_txt = new text.Sprite(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT);
+	game_over_txt.text = 'GAME OVER\n PRESS [SPACE] TO RESTART';
+	player.remove();
+	ended = true;
+
+}
+
+function reset() {
+
+	ended = false;
+	score = 0;
+	game_over_txt.remove();
+	forks.removeAll()
+	for (let i = 0; i < fork_count; i++) {
+
+		add_forks(
+			x = WIDTH + (WIDTH / fork_count) * i + fork_width / 2,
+			img = fork_img
+		)
+	
+	}
+	player = new Sprite(500, CENTER_Y);
+    
+    player.img = player_img;
+    player.collider = 'none';
+	player.addCollider(0, 0, 444, 280)
+	player.collider = 'd';
+    player.layer = 1;
+    player.scale = 0.3;
+	player.debug = true;
+
+}
+
 // PLAYER
 function jump() {
     player.vel.y = -player_jump_boost;
@@ -175,6 +269,10 @@ function jump() {
 
 function fall() {
     player.vel.y += player_grav;
+}
+
+function check_out_of_bounds() {
+	if (player.y <= 0 + (player_height / 2) || player.y >= HEIGHT - (player_height / 2)) {game_over()}
 }
 
 // FORKS
@@ -191,11 +289,11 @@ function add_forks(x, img) {
     fork2.img = img;
     fork2.scale = fork_scale;
 	fork2.collider = 'k';
-    fork2.rotation = 180
-    fork2.passed = false
-    fork2.orientation = 'down'
+    fork2.rotation = 180;
+    fork2.passed = false;
+    fork2.orientation = 'down';
 
-    position_forks(x, fork1, fork2)
+    position_forks(x, fork1, fork2);
     
 }
 
