@@ -53,6 +53,7 @@ function preload() {
     
     player_img = loadImage('images/player/taco0.png');
     fork_img = loadImage('images/fork/fork.png');
+	font = loadFont('fonts/pixel_font.ttf');
     
 }
 
@@ -144,6 +145,7 @@ function setup() {
 function draw() {
 
 	frameRate(FPS);
+	textFont(font);
     background(color(BG_COLOUR));
 
     // Game
