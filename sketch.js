@@ -64,7 +64,7 @@ function setup() {
     passed = false;
     collided = false;
     score = 0;
-    high_score = 0;
+    high_score = localStorage.getItem('highscore');
 
     // Player
     player_grav = 0.75;
@@ -221,7 +221,10 @@ function update_score() {
     }
 
     if (score > high_score) {
+        
         high_score = score;
+        localStorage.setItem('highscore', high_score)
+        
     }
      
 }
