@@ -1,14 +1,8 @@
 // Screen Setup
-const WIDTH = 1920;
-const HEIGHT = 1080;
-
-const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2;
-
 const FPS = 60;
 
 // Colours
-const BG_COLOUR = '#101010';
+const BG_COLOUR = '#202020';
 
 // Game
 let paused;
@@ -17,6 +11,15 @@ let passed;
 let collided;
 let score;
 let high_score;
+localStorage.setItem('highscore', 0)
+
+// Font
+let font;
+
+// Sounds
+let music;
+let player_jump;
+let player_death;
 
 // Text
 let score_txt;
@@ -50,17 +53,25 @@ let fork_speed;
 let fork_hitboxes;
 
 function preload() {
-    
+
+    // Images
     player_img = loadImage('images/player/taco0.png');
     fork_img = loadImage('images/fork/fork.png');
-	font = loadFont('fonts/pixel_font.ttf');
+
+    // Font
+    font = loadFont('fonts/pixel_font.otf');
+
+    // Sounds
+    music = loadSound('audio/music/raining-tacos.mp3');
+    player_jump = loadSound('audio/sfx/jump.wav');
+    player_death = loadSound('audio/sfx/death.mp3');
     
 }
 
 // GAME
 function setup() {
 
-    new Canvas(WIDTH, HEIGHT);
+    new Canvas();
 
     // Game
 	paused = true;
@@ -77,7 +88,7 @@ function setup() {
 	player_width = 444 * player_scale;
 	player_height = 280 * player_scale;
     
-    player = new Sprite(500, CENTER_Y);
+    player = new Sprite(500, canvas.hh);
     
     player.img = player_img;
     player.collider = 'none';
@@ -115,30 +126,23 @@ function setup() {
     // Text
     text = new Group();
 
-    text.textSize = 50;
+    text.textSize = 40;
     text.textColor = color('#ffffff');
     text.collider = 's';
     text.color = color('#080808');
     text.stroke = color('#080808');
-    
-    score_txt = new text.Sprite(100, 50, 160, 60);
-    score_txt.text = 'Score';
-    
-    score_count_txt = new text.Sprite(100, 100, 160, 60);
-    score_count_txt.text = score;
-	score_count_txt.textColor = color('#ffff00');
 
-	press_mouse_txt = new text.Sprite(500, HEIGHT / 3, 400, 100);
+	press_mouse_txt = new text.Sprite(500, canvas.h / 3, 500, 100);
 	press_mouse_txt.text = 'Click to begin';
 	press_mouse_txt.textColor = color('#ffff00');
 	clicked = false;
 
-    high_score_txt = new text.Sprite(WIDTH - 150, 50, 250, 70);
-    high_score_txt.text = 'Highscore';
-    
-    high_score_count_txt = new text.Sprite(WIDTH - 150, 115, 250, 60);
-    high_score_count_txt.text = high_score;
-	high_score_count_txt.textColor = color('#ffff00');
+    add_scores_text();
+
+    // Sounds
+    music.setVolume(0.1);
+    music.autoplay = true;
+    music.loop();
 
 }
 
@@ -156,6 +160,24 @@ function draw() {
     
     // Forks
 	update_forks();
+    
+}
+
+function add_scores_text() {
+
+    score_txt = new text.Sprite(120, 50, 200, 60);
+    score_txt.text = 'Score';
+
+    score_count_txt = new text.Sprite(120, 105, 200, 60);
+    score_count_txt.text = score;
+	score_count_txt.textColor = color('#ffff00');
+
+    high_score_txt = new text.Sprite(canvas.w - 190, 50, 340, 60);
+    high_score_txt.text = 'Highscore';
+    
+    high_score_count_txt = new text.Sprite(canvas.w - 190, 110, 340, 60);
+    high_score_count_txt.text = high_score;
+	high_score_count_txt.textColor = color('#ffff00');
     
 }
 
@@ -235,35 +257,25 @@ function update_score() {
 
 function game_over() {
 
-	game_over_txt = new text.Sprite(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT);
+    music.stop()
+
+	game_over_txt = new text.Sprite(canvas.hw, canvas.hh, canvas.w, canvas.h + 500);
 	game_over_txt.text = 'GAME OVER';
 	game_over_txt.textColor = color('#ff4040');
 	game_over_txt.color = color(BG_COLOUR);
-	game_over_txt.textSize = 150;
+	game_over_txt.textSize = 200;
 
-	game_over_txt1 = new text.Sprite(WIDTH / 2, HEIGHT / 2 + 100, 800, 100);
+	game_over_txt1 = new text.Sprite(canvas.hw, canvas.hh + 160, 800, 100);
 	game_over_txt1.text = 'Press [SPACE] to restart';
 	game_over_txt1.textColor = color('#ffffff');
 	game_over_txt1.color = color(BG_COLOUR);
 	game_over_txt1.stroke = color(BG_COLOUR);
 	game_over_txt1.textSize = 50;
 
-	high_score_txt = new text.Sprite(WIDTH - 150, 50, 250, 70);
-    high_score_txt.text = 'Highscore';
-	
-    
-    high_score_count_txt = new text.Sprite(WIDTH - 150, 115, 250, 60);
-    high_score_count_txt.text = high_score;
-	high_score_count_txt.textColor = color('#ffff00');
-
-	score_txt = new text.Sprite(100, 50, 160, 60);
-    score_txt.text = 'Score';
-    
-    score_count_txt = new text.Sprite(100, 100, 160, 60);
-    score_count_txt.text = score;
-	score_count_txt.textColor = color('#ffff00');
+	add_scores_text()
 
 	player.remove();
+    player_death.play()
 	ended = true;
 
 }
@@ -284,7 +296,10 @@ function update_player() {
 }
 
 function jump() {
+    
     player.vel.y = -player_jump_boost;
+    player_jump.play()
+    
 }
 
 function fall() {
@@ -292,7 +307,7 @@ function fall() {
 }
 
 function check_out_of_bounds() {
-	if (player.y <= 0 + (player_height / 2) || player.y >= HEIGHT - (player_height / 2)) {game_over()}
+	if (player.y <= 0 + (player_height / 2) || player.y >= canvas.h - (player_height / 2)) {game_over()}
 }
 
 // FORKS
@@ -304,7 +319,7 @@ function update_forks() {
         let fork1 = forks[i - 1];
         let fork2 = forks[i];
 
-        if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {position_forks(WIDTH - fork_width / 2, fork1, fork2)}
+        if (fork1.x <= 0 - fork_width / 2 || fork2.x <= 0 - fork_width / 2) {position_forks(canvas.w - fork_width / 2, fork1, fork2)}
         
     }
 
@@ -331,7 +346,7 @@ function add_forks(x) {
 function add_all_forks() {
     
     for (let i = 0; i < fork_count; i++) {
-		add_forks(x = WIDTH / 2 + (WIDTH / fork_count) * i + fork_width / 2);
+		add_forks(x = canvas.w / 2 + (canvas.w / fork_count) * i + fork_width / 2);
 	}
 
     for (let i = 0; i < forks.length; i++) {
